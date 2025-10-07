@@ -17,7 +17,12 @@ interface UploadStepProps {
 }
 
 const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
-  const [url, setUrl] = useState('');
+  // Prefill test URL in development mode
+  const testDocUrl = import.meta.env.VITE_TEST_MODE === 'true' 
+    ? import.meta.env.VITE_TEST_DOC_URL 
+    : '';
+  
+  const [url, setUrl] = useState(testDocUrl || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<any>(null);
@@ -93,6 +98,12 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
       <Typography variant="body1" color="text.secondary" paragraph>
         Upload a document file or provide a URL to your existing API documentation
       </Typography>
+
+      {import.meta.env.VITE_TEST_MODE === 'true' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <strong>Test Mode Active</strong> - Using development test values
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>

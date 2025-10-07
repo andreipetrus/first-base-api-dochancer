@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -22,6 +22,31 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   onBack,
   extractedBaseUrl,
 }) => {
+  // Prefill test values in development mode
+  useEffect(() => {
+    if (import.meta.env.VITE_TEST_MODE === 'true') {
+      const testConfig: Partial<ProjectConfig> = {};
+      
+      // Only set values if they're not already set
+      if (!config.claudeApiKey && import.meta.env.VITE_TEST_CLAUDE_KEY) {
+        testConfig.claudeApiKey = import.meta.env.VITE_TEST_CLAUDE_KEY;
+      }
+      if (!config.testApiKey && import.meta.env.VITE_TEST_API_KEY) {
+        testConfig.testApiKey = import.meta.env.VITE_TEST_API_KEY;
+      }
+      if (!config.productUrl && import.meta.env.VITE_TEST_PRODUCT_URL) {
+        testConfig.productUrl = import.meta.env.VITE_TEST_PRODUCT_URL;
+      }
+      
+      if (Object.keys(testConfig).length > 0) {
+        onConfigChange({
+          ...config,
+          ...testConfig,
+        });
+      }
+    }
+  }, []); // Run only once on mount
+
   const handleChange = (field: keyof ProjectConfig) => (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -49,6 +74,12 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
       {extractedBaseUrl && (
         <Alert severity="success" sx={{ mb: 3 }}>
           Base URL detected from documentation: <strong>{extractedBaseUrl}</strong>
+        </Alert>
+      )}
+
+      {import.meta.env.VITE_TEST_MODE === 'true' && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>Test Mode:</strong> Development credentials are prefilled. Remember to add your Claude API key manually if not set in .env.local
         </Alert>
       )}
 
