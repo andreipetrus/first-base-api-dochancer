@@ -4,6 +4,7 @@ import { processRouter } from './process';
 import { generateRouter } from './generate';
 import { chatRouter } from './chat';
 import { previewRouter } from './preview';
+import { validateRouter } from './validate';
 
 export const setupRoutes = (app: Express) => {
   app.use('/api/upload', uploadRouter);
@@ -11,6 +12,7 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/generate', generateRouter);
   app.use('/api/chat', chatRouter);
   app.use('/api/preview', previewRouter);
+  app.use('/api/validate', validateRouter);
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });

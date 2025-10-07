@@ -79,10 +79,18 @@ export interface ParsedDocument {
 }
 
 export interface ProcessingStatus {
-  step: 'uploading' | 'parsing' | 'extracting' | 'categorizing' | 'testing' | 'generating' | 'complete' | 'error';
+  step: 'validating' | 'uploading' | 'parsing' | 'extracting' | 'categorizing' | 'testing' | 'generating' | 'complete' | 'error';
   progress: number;
   message: string;
   details?: any;
+  validations?: ValidationResult[];
+}
+
+export interface ValidationResult {
+  type: 'url' | 'claude_api' | 'test_api';
+  status: 'pending' | 'checking' | 'success' | 'failure';
+  message: string;
+  details?: string;
 }
 
 export interface GeneratedDocumentation {
