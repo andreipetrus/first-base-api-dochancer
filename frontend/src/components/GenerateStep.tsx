@@ -76,15 +76,15 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
 
   const handleDownload = () => {
     if (downloadUrl) {
+      // The URL already starts with /api which will be proxied
       window.open(downloadUrl, '_blank');
     }
   };
 
   const handlePreview = () => {
     if (previewUrl) {
-      // Open preview in new tab with full URL
-      const fullUrl = `${window.location.origin}${previewUrl}`;
-      window.open(fullUrl, '_blank');
+      // Open preview in new tab - the URL already starts with /api which will be proxied
+      window.open(previewUrl, '_blank');
     }
   };
 
