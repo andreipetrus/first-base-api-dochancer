@@ -43,6 +43,7 @@ function App() {
   const [openApiSpec, setOpenApiSpec] = useState<any>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [showChat, setShowChat] = useState(false);
+  const [extractedBaseUrl, setExtractedBaseUrl] = useState<string | undefined>();
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -59,6 +60,11 @@ function App() {
           <UploadStep
             onUpload={(file) => {
               setUploadedFile(file);
+              // Extract and store the base URL if found
+              if (file.parsed?.baseUrl) {
+                setExtractedBaseUrl(file.parsed.baseUrl);
+                setConfig(prev => ({ ...prev, baseUrl: file.parsed.baseUrl }));
+              }
               handleNext();
             }}
           />
@@ -70,6 +76,7 @@ function App() {
             onConfigChange={setConfig}
             onNext={handleNext}
             onBack={handleBack}
+            extractedBaseUrl={extractedBaseUrl}
           />
         );
       case 2:

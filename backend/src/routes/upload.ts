@@ -53,6 +53,7 @@ router.post('/file', upload.single('document'), async (req, res, next) => {
       filePath: req.file.path,
       parsed: {
         title: parsedDoc.title,
+        baseUrl: parsedDoc.baseUrl,
         endpointsCount: parsedDoc.endpoints.length,
         hasContent: !!parsedDoc.rawContent,
       },
@@ -80,6 +81,7 @@ router.post('/url', async (req, res, next) => {
       url,
       parsed: {
         title: parsedDoc.title,
+        baseUrl: parsedDoc.baseUrl,
         endpointsCount: parsedDoc.endpoints.length,
         hasContent: !!parsedDoc.rawContent,
       },

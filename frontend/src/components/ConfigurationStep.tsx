@@ -12,6 +12,7 @@ interface ConfigurationStepProps {
   onConfigChange: (config: ProjectConfig) => void;
   onNext: () => void;
   onBack: () => void;
+  extractedBaseUrl?: string;
 }
 
 const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
@@ -19,6 +20,7 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   onConfigChange,
   onNext,
   onBack,
+  extractedBaseUrl,
 }) => {
   const handleChange = (field: keyof ProjectConfig) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -43,6 +45,12 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
       <Alert severity="info" sx={{ mb: 3 }}>
         Your API keys are only used for this session and are not stored permanently.
       </Alert>
+
+      {extractedBaseUrl && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Base URL detected from documentation: <strong>{extractedBaseUrl}</strong>
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>

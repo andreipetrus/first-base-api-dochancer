@@ -72,6 +72,31 @@ export class DocumentParser {
     doc.title = $('title').text() || $('h1').first().text() || undefined;
     doc.description = $('meta[name="description"]').attr('content') || undefined;
     
+    // Try to find base URL in specific HTML elements
+    if (!doc.baseUrl) {
+      // Look for base URL in code blocks
+      $('code, pre').each((i, elem) => {
+        const codeText = $(elem).text();
+        const baseMatch = codeText.match(/https?:\/\/[^\s\/]+(?:\/api(?:\/v\d+)?)?/);
+        if (baseMatch && !doc.baseUrl) {
+          doc.baseUrl = baseMatch[0];
+        }
+      });
+      
+      // Look for base URL in links
+      if (!doc.baseUrl) {
+        $('a[href*="://"]').each((i, elem) => {
+          const href = $(elem).attr('href');
+          if (href && href.includes('api') && !doc.baseUrl) {
+            const baseMatch = href.match(/(https?:\/\/[^\/]+(?:\/api(?:\/v\d+)?)?)/);
+            if (baseMatch) {
+              doc.baseUrl = baseMatch[1];
+            }
+          }
+        });
+      }
+    }
+    
     return doc;
   }
 
@@ -161,7 +186,37 @@ export class DocumentParser {
 
   private extractAPIInfo(text: string): ParsedDocument {
     const endpoints: APIEndpoint[] = [];
+    let baseUrl: string | undefined;
     
+    // Extract base URL patterns
+    const baseUrlPatterns = [
+      /(?:base\s*url|api\s*endpoint|host|server)[:\s]+([https?:\/\/][^\s\n]+)/gi,
+      /https?:\/\/[^\s]+\/api(?:\/v\d+)?(?=[\s\n])/gi,
+      /https?:\/\/api\.[^\s\/]+(?:\/v\d+)?/gi,
+      /https?:\/\/[^\s]+\.com(?:\/api)?(?:\/v\d+)?/gi,
+      /curl\s+['"]*([https?:\/\/][^\s'"]+)/gi,
+    ];
+    
+    for (const pattern of baseUrlPatterns) {
+      const matches = text.matchAll(pattern);
+      for (const match of matches) {
+        const url = match[1] || match[0];
+        // Clean up the URL
+        const cleanUrl = url
+          .replace(/['"`,;]$/, '')
+          .replace(/\/$/, '')
+          .replace(/\/\{[^}]+\}$/, ''); // Remove path parameters at the end
+        
+        // Validate it looks like a base URL (not too long, no query params)
+        if (cleanUrl.length < 100 && !cleanUrl.includes('?') && cleanUrl.includes('://')) {
+          baseUrl = cleanUrl;
+          break;
+        }
+      }
+      if (baseUrl) break;
+    }
+    
+    // Extract endpoints
     const methodPattern = /(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+([\/\w\-\{\}:]+)/gi;
     const matches = text.matchAll(methodPattern);
     
@@ -179,11 +234,21 @@ export class DocumentParser {
       }
     }
     
+    // Also look for full URL patterns to extract both base URL and endpoints
     const urlPattern = /https?:\/\/[^\s]+\/api[^\s]*/gi;
     const urlMatches = text.matchAll(urlPattern);
     
     for (const match of urlMatches) {
       const url = match[0];
+      
+      // Try to extract base URL if we don't have one
+      if (!baseUrl) {
+        const baseMatch = url.match(/(https?:\/\/[^\/]+(?:\/api(?:\/v\d+)?)?)/);
+        if (baseMatch) {
+          baseUrl = baseMatch[1];
+        }
+      }
+      
       const pathMatch = url.match(/\/api[\/\w\-\{\}:]*/);
       
       if (pathMatch) {
@@ -201,6 +266,7 @@ export class DocumentParser {
     }
     
     return {
+      baseUrl,
       endpoints,
       rawContent: text.substring(0, 10000),
     };

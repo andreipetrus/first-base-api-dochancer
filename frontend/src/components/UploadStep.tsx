@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LinkIcon from '@mui/icons-material/Link';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import axios from 'axios';
@@ -19,6 +20,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successInfo, setSuccessInfo] = useState<any>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -29,6 +31,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
 
     setLoading(true);
     setError(null);
+    setSuccessInfo(null);
 
     try {
       const response = await axios.post('/api/upload/file', formData, {
@@ -37,7 +40,10 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
         },
       });
 
-      onUpload(response.data);
+      setSuccessInfo(response.data.parsed);
+      setTimeout(() => {
+        onUpload(response.data);
+      }, 1500); // Brief delay to show success message
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to upload file');
     } finally {
@@ -64,10 +70,14 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
 
     setLoading(true);
     setError(null);
+    setSuccessInfo(null);
 
     try {
       const response = await axios.post('/api/upload/url', { url });
-      onUpload(response.data);
+      setSuccessInfo(response.data.parsed);
+      setTimeout(() => {
+        onUpload(response.data);
+      }, 1500); // Brief delay to show success message
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch documentation from URL');
     } finally {
@@ -87,6 +97,31 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUpload }) => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+
+      {successInfo && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 2 }} 
+          icon={<CheckCircleIcon />}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            Document parsed successfully!
+          </Typography>
+          <Typography variant="body2">
+            • Found {successInfo.endpointsCount} API endpoints
+          </Typography>
+          {successInfo.baseUrl && (
+            <Typography variant="body2">
+              • Extracted base URL: <strong>{successInfo.baseUrl}</strong>
+            </Typography>
+          )}
+          {successInfo.title && (
+            <Typography variant="body2">
+              • Title: {successInfo.title}
+            </Typography>
+          )}
         </Alert>
       )}
 
