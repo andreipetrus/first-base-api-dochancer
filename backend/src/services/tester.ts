@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { APIEndpoint, TestResult } from '@api-dochancer/shared';
+import { APIEndpoint, TestResult, APIParameter } from '@api-dochancer/shared';
 import { ClaudeService } from './claude';
 import { createLogger } from '../utils/logger';
 
@@ -9,11 +9,13 @@ export class APITester {
   private baseUrl: string = '';
   private apiKey: string = '';
   private claudeService?: ClaudeService;
+  private apiParameters: APIParameter[] = [];
 
-  configure(baseUrl: string, apiKey: string, claudeService?: ClaudeService) {
+  configure(baseUrl: string, apiKey: string, claudeService?: ClaudeService, apiParameters?: APIParameter[]) {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
     this.claudeService = claudeService;
+    this.apiParameters = apiParameters || [];
   }
 
   async testEndpoint(endpoint: APIEndpoint): Promise<TestResult> {
@@ -77,19 +79,40 @@ export class APITester {
   private buildUrl(endpoint: APIEndpoint): string {
     let path = endpoint.path;
     
+    // First apply custom path parameters from configuration
+    for (const param of this.apiParameters.filter(p => p.type === 'path')) {
+      if (param.name && param.value && path.includes(`{${param.name}}`)) {
+        path = path.replace(`{${param.name}}`, param.value);
+      }
+    }
+    
+    // Then apply endpoint-specific path parameters
     if (endpoint.parameters) {
       for (const param of endpoint.parameters.filter(p => p.in === 'path')) {
-        const value = this.generateParamValue(param);
+        // Check if we have a custom value for this parameter
+        const customParam = this.apiParameters.find(p => p.type === 'path' && p.name === param.name);
+        const value = customParam?.value || this.generateParamValue(param);
         path = path.replace(`{${param.name}}`, value);
       }
     }
 
     const url = new URL(path, this.baseUrl);
     
+    // Add custom query parameters from configuration
+    for (const param of this.apiParameters.filter(p => p.type === 'query')) {
+      if (param.name && param.value) {
+        url.searchParams.append(param.name, param.value);
+      }
+    }
+    
+    // Add endpoint-specific query parameters
     if (endpoint.parameters) {
       for (const param of endpoint.parameters.filter(p => p.in === 'query')) {
-        const value = this.generateParamValue(param);
-        url.searchParams.append(param.name, value);
+        // Don't add if already added from custom parameters
+        if (!this.apiParameters.find(p => p.type === 'query' && p.name === param.name)) {
+          const value = this.generateParamValue(param);
+          url.searchParams.append(param.name, value);
+        }
       }
     }
 
@@ -105,6 +128,14 @@ export class APITester {
     if (this.apiKey) {
       headers['Authorization'] = `Bearer ${this.apiKey}`;
       headers['X-API-Key'] = this.apiKey;
+    }
+
+    // Add custom header parameters from configuration
+    for (const param of this.apiParameters.filter(p => p.type === 'header')) {
+      if (param.name && param.value) {
+        // Override default headers if custom ones are provided
+        headers[param.name] = param.value;
+      }
     }
 
     return headers;

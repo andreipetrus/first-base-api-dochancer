@@ -201,6 +201,7 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
           endpoints,
           baseUrl: config.baseUrl,
           testApiKey: config.testApiKey,
+          apiParameters: config.apiParameters,
           claudeApiKey: config.claudeApiKey,
         });
 

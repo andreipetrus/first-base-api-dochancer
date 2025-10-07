@@ -107,10 +107,20 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface APIParameter {
+  name: string;
+  value: string;
+  type: 'header' | 'query' | 'path';
+  format?: string;
+  description?: string;
+  generated?: boolean;
+}
+
 export interface ProjectConfig {
   apiKey?: string;
   testApiKey?: string;
   claudeApiKey?: string;
   baseUrl?: string;
   productUrl?: string;
+  apiParameters?: APIParameter[];
 }

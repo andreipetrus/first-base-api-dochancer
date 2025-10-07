@@ -61,7 +61,7 @@ router.post('/extract', async (req, res, next) => {
 
 router.post('/test', async (req, res, next) => {
   try {
-    const { endpoints, baseUrl, testApiKey, claudeApiKey } = req.body;
+    const { endpoints, baseUrl, testApiKey, claudeApiKey, apiParameters } = req.body;
     
     if (!endpoints || !Array.isArray(endpoints)) {
       throw new AppError(400, 'Endpoints array is required');
@@ -73,7 +73,7 @@ router.post('/test', async (req, res, next) => {
       claudeService.initialize(claudeApiKey);
     }
 
-    apiTester.configure(baseUrl || '', testApiKey || '', claudeService);
+    apiTester.configure(baseUrl || '', testApiKey || '', claudeService, apiParameters);
 
     const status: ProcessingStatus = {
       step: 'testing',
