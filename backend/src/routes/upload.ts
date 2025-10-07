@@ -5,9 +5,109 @@ import { v4 as uuidv4 } from 'uuid';
 import { getServices } from '../services';
 import { AppError } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
+import { APIEndpoint, APIParameter } from '@api-dochancer/shared';
 
 const logger = createLogger();
 const router = Router();
+
+// Extract common parameters from parsed endpoints
+function extractCommonParameters(endpoints: APIEndpoint[]): APIParameter[] {
+  const paramMap = new Map<string, APIParameter>();
+  const paramFrequency = new Map<string, number>();
+  
+  // Analyze all endpoints to find common parameters
+  for (const endpoint of endpoints) {
+    if (endpoint.parameters) {
+      for (const param of endpoint.parameters) {
+        const key = `${param.in}_${param.name}`;
+        const frequency = paramFrequency.get(key) || 0;
+        paramFrequency.set(key, frequency + 1);
+        
+        if (!paramMap.has(key)) {
+          // Convert endpoint parameter to API parameter
+          const apiParam: APIParameter = {
+            name: param.name,
+            value: param.example?.toString() || '',
+            type: param.in === 'path' ? 'path' : param.in === 'query' ? 'query' : 'header',
+            description: param.description,
+            format: param.schema?.format,
+            generated: false,
+          };
+          paramMap.set(key, apiParam);
+        }
+      }
+    }
+  }
+  
+  // Extract headers from endpoint paths (common auth headers)
+  const commonHeaders = [
+    'Authorization', 'X-API-Key', 'API-Key', 'X-Auth-Token', 
+    'X-Access-Token', 'X-Request-ID', 'X-Session-ID'
+  ];
+  
+  for (const headerName of commonHeaders) {
+    const key = `header_${headerName}`;
+    // Check if this header appears in endpoint descriptions or paths
+    const isUsed = endpoints.some(ep => 
+      ep.description?.toLowerCase().includes(headerName.toLowerCase()) ||
+      ep.summary?.toLowerCase().includes(headerName.toLowerCase()) ||
+      ep.description?.toLowerCase().includes('authentication') ||
+      ep.description?.toLowerCase().includes('api key') ||
+      ep.summary?.toLowerCase().includes('authentication') ||
+      ep.summary?.toLowerCase().includes('api key')
+    );
+    
+    if (isUsed && !paramMap.has(key)) {
+      paramMap.set(key, {
+        name: headerName,
+        value: '',
+        type: 'header',
+        description: `${headerName} header for authentication`,
+        generated: false,
+      });
+    }
+  }
+  
+  // Return parameters that appear in at least 20% of endpoints or are auth headers
+  const threshold = Math.ceil(endpoints.length * 0.2);
+  const commonParams: APIParameter[] = [];
+  
+  for (const [key, param] of paramMap.entries()) {
+    const frequency = paramFrequency.get(key) || 0;
+    if (frequency >= threshold || param.type === 'header') {
+      commonParams.push(param);
+    }
+  }
+  
+  // Always include Content-Type and Accept if API uses JSON
+  const hasJsonEndpoints = endpoints.some(ep => 
+    ep.requestBody?.content?.['application/json'] ||
+    ep.responses?.some(r => r.content?.['application/json'])
+  );
+  
+  if (hasJsonEndpoints) {
+    if (!commonParams.find(p => p.name === 'Content-Type')) {
+      commonParams.push({
+        name: 'Content-Type',
+        value: 'application/json',
+        type: 'header',
+        description: 'Content type header',
+        generated: false,
+      });
+    }
+    if (!commonParams.find(p => p.name === 'Accept')) {
+      commonParams.push({
+        name: 'Accept',
+        value: 'application/json',
+        type: 'header',
+        description: 'Accept header',
+        generated: false,
+      });
+    }
+  }
+  
+  return commonParams;
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -47,6 +147,9 @@ router.post('/file', upload.single('document'), async (req, res, next) => {
 
     logger.info(`File parsed successfully: ${req.file.originalname}`);
 
+    // Extract common parameters from endpoints
+    const extractedParams = extractCommonParameters(parsedDoc.endpoints);
+    
     res.json({
       success: true,
       fileName: req.file.originalname,
@@ -56,6 +159,7 @@ router.post('/file', upload.single('document'), async (req, res, next) => {
         baseUrl: parsedDoc.baseUrl,
         endpointsCount: parsedDoc.endpoints.length,
         hasContent: !!parsedDoc.rawContent,
+        commonParameters: extractedParams,
       },
     });
   } catch (error) {
@@ -76,6 +180,9 @@ router.post('/url', async (req, res, next) => {
 
     logger.info(`URL parsed successfully: ${url}`);
 
+    // Extract common parameters from endpoints
+    const extractedParams = extractCommonParameters(parsedDoc.endpoints);
+    
     res.json({
       success: true,
       url,
@@ -84,6 +191,7 @@ router.post('/url', async (req, res, next) => {
         baseUrl: parsedDoc.baseUrl,
         endpointsCount: parsedDoc.endpoints.length,
         hasContent: !!parsedDoc.rawContent,
+        commonParameters: extractedParams,
       },
     });
   } catch (error) {

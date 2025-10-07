@@ -25,6 +25,7 @@ interface ConfigurationStepProps {
   onNext: () => void;
   onBack: () => void;
   extractedBaseUrl?: string;
+  extractedParameters?: APIParameter[];
 }
 
 const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
@@ -33,8 +34,29 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   onNext,
   onBack,
   extractedBaseUrl,
+  extractedParameters,
 }) => {
-  const [apiParams, setApiParams] = useState<APIParameter[]>(config.apiParameters || []);
+  // Initialize with extracted parameters or existing config
+  const [apiParams, setApiParams] = useState<APIParameter[]>(
+    config.apiParameters || extractedParameters || []
+  );
+  // Update parameters when extracted parameters are provided
+  useEffect(() => {
+    if (extractedParameters && extractedParameters.length > 0 && apiParams.length === 0) {
+      // Auto-generate values for extracted parameters
+      const paramsWithValues = extractedParameters.map(param => ({
+        ...param,
+        value: param.value || generateParameterValue(param),
+        generated: !param.value,
+      }));
+      setApiParams(paramsWithValues);
+      onConfigChange({
+        ...config,
+        apiParameters: paramsWithValues,
+      });
+    }
+  }, [extractedParameters]);
+
   // Prefill test values in development mode
   useEffect(() => {
     if (import.meta.env.VITE_TEST_MODE === 'true') {
@@ -211,6 +233,13 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
       {extractedBaseUrl && (
         <Alert severity="success" sx={{ mb: 3 }}>
           Base URL detected from documentation: <strong>{extractedBaseUrl}</strong>
+        </Alert>
+      )}
+
+      {extractedParameters && extractedParameters.length > 0 && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Extracted <strong>{extractedParameters.length}</strong> common parameters from the API documentation. 
+          Values have been auto-generated where possible. You can modify them below.
         </Alert>
       )}
 
