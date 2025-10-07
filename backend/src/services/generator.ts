@@ -20,7 +20,7 @@ export class OpenAPIGenerator {
       info: {
         title: metadata.title || 'API Documentation',
         description: metadata.description || 'Auto-generated API documentation',
-        version: metadata.version || '1.0.0',
+        version: metadata.version || '1.0.0',  // Will use inferred version if available
       },
       servers: metadata.baseUrl ? [{ url: metadata.baseUrl }] : [],
       paths: this.generatePaths(endpoints),

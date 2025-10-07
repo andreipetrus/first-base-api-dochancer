@@ -25,6 +25,7 @@
     "test:e2e:report": "playwright show-report",
     "test:upload": "playwright test upload.spec.ts",
     "test:workflow": "playwright test full-workflow.spec.ts",
+    "test:preview": "playwright test preview.spec.ts",
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {

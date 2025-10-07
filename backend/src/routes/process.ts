@@ -49,7 +49,7 @@ router.post('/extract', async (req, res, next) => {
       result: {
         title: parsedDoc.title,
         description: parsedDoc.description,
-        version: parsedDoc.version,
+        version: parsedDoc.version,  // This now includes the inferred version
         baseUrl: parsedDoc.baseUrl,
         endpoints,
       },

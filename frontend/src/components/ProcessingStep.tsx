@@ -17,7 +17,7 @@ import axios from 'axios';
 interface ProcessingStepProps {
   uploadedFile: any;
   config: ProjectConfig;
-  onProcessComplete: (endpoints: APIEndpoint[]) => void;
+  onProcessComplete: (endpoints: APIEndpoint[], metadata?: any) => void;
   onStatusChange: (status: ProcessingStatus | null) => void;
 }
 
@@ -176,6 +176,11 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
       });
 
       const endpoints = extractResponse.data.result.endpoints;
+      const extractedMetadata = {
+        version: extractResponse.data.result.version,
+        title: extractResponse.data.result.title,
+        description: extractResponse.data.result.description,
+      };
 
       setStatus({
         step: 'categorizing',
@@ -209,7 +214,7 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
           validations,
         });
 
-        onProcessComplete(testedEndpoints);
+        onProcessComplete(testedEndpoints, extractedMetadata);
       } else {
         setStatus({
           step: 'complete',
@@ -218,7 +223,7 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
           validations,
         });
 
-        onProcessComplete(endpoints);
+        onProcessComplete(endpoints, extractedMetadata);
       }
 
       onStatusChange(status);

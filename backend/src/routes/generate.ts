@@ -19,9 +19,10 @@ router.post('/openapi', async (req, res, next) => {
 
     const { openAPIGenerator } = getServices();
     
+    // Ensure version is passed through metadata
     const openApiSpec = openAPIGenerator.generate(endpoints, metadata || {});
     
-    logger.info('OpenAPI specification generated successfully');
+    logger.info(`OpenAPI specification generated successfully (version: ${metadata?.version || '1.0.0'})`);
 
     res.json({
       success: true,
@@ -52,7 +53,7 @@ router.post('/html', async (req, res, next) => {
       fileName: documentation.htmlBundle,
       warnings: documentation.warnings,
       downloadUrl: `/api/generate/download/${documentation.htmlBundle}`,
-      previewUrl: `/api/preview/${documentation.htmlBundle}.html`,
+      previewUrl: `/api/preview/docs/${documentation.htmlBundle}`,
     });
   } catch (error) {
     next(error);

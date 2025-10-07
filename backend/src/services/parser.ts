@@ -40,11 +40,24 @@ export class DocumentParser {
         timeout: 30000 
       });
       
+      let doc: ParsedDocument;
+      
       if (response.headers['content-type']?.includes('application/json')) {
-        return this.parseJSON(JSON.stringify(response.data));
+        doc = this.parseJSON(JSON.stringify(response.data));
+      } else {
+        doc = this.parseHTML(response.data);
       }
       
-      return this.parseHTML(response.data);
+      // Try to extract version from URL if not found in content
+      if (!doc.version) {
+        const urlVersionMatch = url.match(/(?:\/v(\d+)|\/api_doc\/(\d+)|version[\/=](\d+(?:\.\d+)*))/i);
+        if (urlVersionMatch) {
+          const v = urlVersionMatch[1] || urlVersionMatch[2] || urlVersionMatch[3];
+          doc.version = v.includes('.') ? v : `${v}.0`;
+        }
+      }
+      
+      return doc;
     } catch (error) {
       logger.error('Error fetching URL:', error);
       throw new Error('Failed to fetch documentation from URL');
@@ -187,6 +200,30 @@ export class DocumentParser {
   private extractAPIInfo(text: string): ParsedDocument {
     const endpoints: APIEndpoint[] = [];
     let baseUrl: string | undefined;
+    let version: string | undefined;
+    
+    // Extract API version patterns
+    const versionPatterns = [
+      /(?:api\s+)?version[:\s]+v?(\d+(?:\.\d+)*)/gi,
+      /v(\d+(?:\.\d+)*)\s+(?:api|documentation)/gi,
+      /api\/v(\d+(?:\.\d+)*)/gi,
+      /\/api_doc\/(\d+)(?:\.html)?/gi,  // For URLs like api_doc/2.html
+      /"version"[:\s]+"?(\d+(?:\.\d+)*)"?/gi,
+      /\bv(\d+)\b(?:\s+API|\s+endpoint)/gi,
+    ];
+    
+    for (const pattern of versionPatterns) {
+      const matches = text.matchAll(pattern);
+      for (const match of matches) {
+        const v = match[1];
+        if (v && v.match(/^\d+(?:\.\d+)*$/)) {
+          // Normalize version format (add .0 if single digit)
+          version = v.includes('.') ? v : `${v}.0`;
+          break;
+        }
+      }
+      if (version) break;
+    }
     
     // Extract base URL patterns
     const baseUrlPatterns = [
@@ -267,6 +304,7 @@ export class DocumentParser {
     
     return {
       baseUrl,
+      version,
       endpoints,
       rawContent: text.substring(0, 10000),
     };

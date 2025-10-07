@@ -7,47 +7,74 @@ import { createLogger } from '../utils/logger';
 const logger = createLogger();
 const router = Router();
 
-router.get('/:fileName', (req, res, next) => {
+// Main preview route - serves HTML documentation
+router.get('/docs/:fileName', (req, res, next) => {
   try {
     const { fileName } = req.params;
     const generatedDir = path.resolve(process.env.GENERATED_DIR || './generated');
-    const filePath = path.join(generatedDir, fileName);
+    
+    // Add .html extension if not present
+    const htmlFileName = fileName.endsWith('.html') ? fileName : `${fileName}.html`;
+    const filePath = path.join(generatedDir, htmlFileName);
     
     if (!fs.existsSync(filePath)) {
-      throw new AppError(404, 'Preview file not found');
+      throw new AppError(404, `Preview file not found: ${htmlFileName}`);
     }
 
-    const ext = path.extname(fileName).toLowerCase();
+    // Set proper content type and serve the HTML
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.sendFile(filePath);
     
-    if (ext === '.html') {
-      res.sendFile(filePath);
-    } else if (ext === '.json') {
-      const content = fs.readFileSync(filePath, 'utf8');
-      res.json(JSON.parse(content));
-    } else {
-      res.sendFile(filePath);
-    }
-    
-    logger.info(`Preview served for: ${fileName}`);
+    logger.info(`Preview served for: ${htmlFileName}`);
   } catch (error) {
     next(error);
   }
 });
 
-router.post('/server', (req, res) => {
-  const port = 8080;
-  const host = 'localhost';
-  const previewUrl = `http://${host}:${port}`;
-  
-  logger.info(`Preview server info requested: ${previewUrl}`);
-  
-  res.json({
-    success: true,
-    url: previewUrl,
-    port,
-    host,
-    message: 'Access your generated documentation at the URL above',
-  });
+// Serve OpenAPI spec JSON
+router.get('/spec/:fileName', (req, res, next) => {
+  try {
+    const { fileName } = req.params;
+    const generatedDir = path.resolve(process.env.GENERATED_DIR || './generated');
+    
+    // Add .json extension if not present
+    const jsonFileName = fileName.endsWith('.json') ? fileName : `${fileName}-spec.json`;
+    const filePath = path.join(generatedDir, jsonFileName);
+    
+    if (!fs.existsSync(filePath)) {
+      throw new AppError(404, `Spec file not found: ${jsonFileName}`);
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    res.json(JSON.parse(content));
+    
+    logger.info(`Spec served for: ${jsonFileName}`);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// List available previews
+router.get('/list', (req, res) => {
+  try {
+    const generatedDir = path.resolve(process.env.GENERATED_DIR || './generated');
+    
+    if (!fs.existsSync(generatedDir)) {
+      return res.json({ success: true, files: [] });
+    }
+    
+    const files = fs.readdirSync(generatedDir)
+      .filter(file => file.endsWith('.html'))
+      .map(file => ({
+        name: file,
+        url: `/api/preview/docs/${file}`,
+        created: fs.statSync(path.join(generatedDir, file)).mtime,
+      }));
+    
+    res.json({ success: true, files });
+  } catch (error) {
+    res.json({ success: false, files: [] });
+  }
 });
 
 export { router as previewRouter };

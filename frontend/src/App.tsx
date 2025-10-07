@@ -44,6 +44,7 @@ function App() {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [extractedBaseUrl, setExtractedBaseUrl] = useState<string | undefined>();
+  const [extractedMetadata, setExtractedMetadata] = useState<any>({});
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -84,8 +85,9 @@ function App() {
           <ProcessingStep
             uploadedFile={uploadedFile}
             config={config}
-            onProcessComplete={(extractedEndpoints) => {
+            onProcessComplete={(extractedEndpoints, metadata) => {
               setEndpoints(extractedEndpoints);
+              setExtractedMetadata(metadata || {});
               handleNext();
             }}
             onStatusChange={setProcessingStatus}
@@ -106,6 +108,7 @@ function App() {
           <GenerateStep
             endpoints={endpoints}
             config={config}
+            metadata={extractedMetadata}
             onSpecGenerated={setOpenApiSpec}
             onChatOpen={() => setShowChat(true)}
           />

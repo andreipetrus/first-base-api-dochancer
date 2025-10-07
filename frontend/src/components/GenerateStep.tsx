@@ -15,6 +15,7 @@ import axios from 'axios';
 interface GenerateStepProps {
   endpoints: APIEndpoint[];
   config: ProjectConfig;
+  metadata?: any;
   onSpecGenerated: (spec: any) => void;
   onChatOpen: () => void;
 }
@@ -22,6 +23,7 @@ interface GenerateStepProps {
 const GenerateStep: React.FC<GenerateStepProps> = ({
   endpoints,
   config,
+  metadata,
   onSpecGenerated,
   onChatOpen,
 }) => {
@@ -31,7 +33,6 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [serverInfo, setServerInfo] = useState<any>(null);
 
   useEffect(() => {
     generateDocumentation();
@@ -42,12 +43,13 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
     setError(null);
 
     try {
+      // Use metadata from extraction, with fallbacks
       const specResponse = await axios.post('/api/generate/openapi', {
         endpoints,
         metadata: {
-          title: 'API Documentation',
-          description: 'Auto-generated OpenAPI documentation',
-          version: '1.0.0',
+          title: metadata?.title || 'API Documentation',
+          description: metadata?.description || 'Auto-generated OpenAPI documentation',
+          version: metadata?.version || '1.0.0',
           baseUrl: config.baseUrl,
         },
       });
@@ -60,9 +62,6 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
       setDownloadUrl(htmlResponse.data.downloadUrl);
       setPreviewUrl(htmlResponse.data.previewUrl);
       setWarnings(htmlResponse.data.warnings || []);
-      
-      const serverResponse = await axios.post('/api/preview/server');
-      setServerInfo(serverResponse.data);
       
       setGenerated(true);
     } catch (err: any) {
@@ -80,7 +79,9 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
 
   const handlePreview = () => {
     if (previewUrl) {
-      window.open(previewUrl, '_blank');
+      // Open preview in new tab with full URL
+      const fullUrl = `${window.location.origin}${previewUrl}`;
+      window.open(fullUrl, '_blank');
     }
   };
 
@@ -157,19 +158,6 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
               </Button>
             </Box>
 
-            {serverInfo && (
-              <Alert severity="info">
-                <Typography variant="subtitle2" gutterBottom>
-                  Local Preview Server
-                </Typography>
-                <Typography variant="body2">
-                  Access your documentation at: <strong>{serverInfo.url}</strong>
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Keep this tab open to maintain the preview server
-                </Typography>
-              </Alert>
-            )}
           </Paper>
 
           <Paper sx={{ p: 3 }}>
