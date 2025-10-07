@@ -46,6 +46,19 @@ function App() {
   const [extractedBaseUrl, setExtractedBaseUrl] = useState<string | undefined>();
   const [extractedMetadata, setExtractedMetadata] = useState<any>({});
 
+  const handleStartOver = () => {
+    // Reset all state to initial values
+    setActiveStep(0);
+    setUploadedFile(null);
+    setConfig({});
+    setEndpoints([]);
+    setOpenApiSpec(null);
+    setProcessingStatus(null);
+    setShowChat(false);
+    setExtractedBaseUrl(undefined);
+    setExtractedMetadata({});
+  };
+
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
@@ -111,6 +124,7 @@ function App() {
             metadata={extractedMetadata}
             onSpecGenerated={setOpenApiSpec}
             onChatOpen={() => setShowChat(true)}
+            onStartOver={handleStartOver}
           />
         );
       default:

@@ -9,6 +9,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import PreviewIcon from '@mui/icons-material/Preview';
 import ChatIcon from '@mui/icons-material/Chat';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { APIEndpoint, ProjectConfig } from '@api-dochancer/shared';
 import axios from 'axios';
 
@@ -18,6 +19,7 @@ interface GenerateStepProps {
   metadata?: any;
   onSpecGenerated: (spec: any) => void;
   onChatOpen: () => void;
+  onStartOver?: () => void;
 }
 
 const GenerateStep: React.FC<GenerateStepProps> = ({
@@ -26,6 +28,7 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
   metadata,
   onSpecGenerated,
   onChatOpen,
+  onStartOver,
 }) => {
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
@@ -157,6 +160,19 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
                 Improve with AI
               </Button>
             </Box>
+
+            {onStartOver && (
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<RestartAltIcon />}
+                  onClick={onStartOver}
+                >
+                  Start Over
+                </Button>
+              </Box>
+            )}
 
           </Paper>
 

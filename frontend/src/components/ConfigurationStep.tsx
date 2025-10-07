@@ -37,6 +37,10 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
       if (!config.productUrl && import.meta.env.VITE_TEST_PRODUCT_URL) {
         testConfig.productUrl = import.meta.env.VITE_TEST_PRODUCT_URL;
       }
+      // Prefill base URL from test env if not already set (and not extracted from doc)
+      if (!config.baseUrl && import.meta.env.VITE_TEST_BASE_URL) {
+        testConfig.baseUrl = import.meta.env.VITE_TEST_BASE_URL;
+      }
       
       if (Object.keys(testConfig).length > 0) {
         onConfigChange({
