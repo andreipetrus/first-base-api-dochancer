@@ -10,6 +10,7 @@ export interface APIEndpoint {
   responses?: Response[];
   examples?: Example[];
   testResult?: TestResult;
+  originalDocumentation?: string; // Verbatim original documentation from source
 }
 
 export interface Parameter {

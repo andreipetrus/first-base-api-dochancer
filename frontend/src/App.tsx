@@ -133,6 +133,7 @@ function App() {
             onSpecGenerated={setOpenApiSpec}
             onChatOpen={() => setShowChat(true)}
             onStartOver={handleStartOver}
+            documentationUrl={uploadedFile?.url || uploadedFile?.filePath}
           />
         );
       default:

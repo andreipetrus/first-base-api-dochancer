@@ -42,20 +42,20 @@ function extractCommonParameters(endpoints: APIEndpoint[]): APIParameter[] {
   // Extract headers from endpoint paths (common auth headers)
   const commonHeaders = [
     'Authorization', 'X-API-Key', 'API-Key', 'X-Auth-Token', 
-    'X-Access-Token', 'X-Request-ID', 'X-Session-ID'
+    'X-Access-Token', 'X-Request-ID', 'X-Session-ID', 'key'
   ];
   
   for (const headerName of commonHeaders) {
     const key = `header_${headerName}`;
-    // Check if this header appears in endpoint descriptions or paths
-    const isUsed = endpoints.some(ep => 
-      ep.description?.toLowerCase().includes(headerName.toLowerCase()) ||
-      ep.summary?.toLowerCase().includes(headerName.toLowerCase()) ||
-      ep.description?.toLowerCase().includes('authentication') ||
-      ep.description?.toLowerCase().includes('api key') ||
-      ep.summary?.toLowerCase().includes('authentication') ||
-      ep.summary?.toLowerCase().includes('api key')
-    );
+    // Check if this header appears in endpoint descriptions, paths, or anywhere in the endpoint
+    const isUsed = endpoints.some(ep => {
+      const epString = JSON.stringify(ep).toLowerCase();
+      const headerLower = headerName.toLowerCase();
+      return epString.includes(headerLower) ||
+             epString.includes('authentication') ||
+             epString.includes('api key') ||
+             epString.includes('auth');
+    });
     
     if (isUsed && !paramMap.has(key)) {
       paramMap.set(key, {

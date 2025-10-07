@@ -11,16 +11,47 @@ const router = Router();
 
 router.post('/openapi', async (req, res, next) => {
   try {
-    const { endpoints, metadata } = req.body;
+    const { endpoints, metadata, productUrl, documentationUrl, claudeApiKey } = req.body;
     
     if (!endpoints || !Array.isArray(endpoints)) {
       throw new AppError(400, 'Endpoints array is required');
     }
 
-    const { openAPIGenerator } = getServices();
+    const { openAPIGenerator, claudeService } = getServices();
+    
+    let enhancedMetadata = { ...metadata };
+    let enhancedEndpoints = endpoints;
+    
+    // If Claude API key is provided, enhance documentation
+    if (claudeApiKey) {
+      try {
+        claudeService.initialize(claudeApiKey);
+        
+        // Generate product intro
+        logger.info('Generating product introduction...');
+        const productIntro = await claudeService.generateProductIntro(
+          productUrl,
+          documentationUrl,
+          metadata?.description
+        );
+        enhancedMetadata.productIntro = productIntro;
+        
+        // Enhance endpoint documentation (process in parallel for speed)
+        logger.info(`Enhancing documentation for ${endpoints.length} endpoints...`);
+        const enhancementPromises = endpoints.map(endpoint => 
+          claudeService.enhanceEndpointDocumentation(endpoint)
+        );
+        enhancedEndpoints = await Promise.all(enhancementPromises);
+        
+        logger.info('Documentation enhancement complete');
+      } catch (error) {
+        logger.error('Error enhancing documentation:', error);
+        // Continue with original endpoints if enhancement fails
+      }
+    }
     
     // Ensure version is passed through metadata
-    const openApiSpec = openAPIGenerator.generate(endpoints, metadata || {});
+    const openApiSpec = openAPIGenerator.generate(enhancedEndpoints, enhancedMetadata);
     
     logger.info(`OpenAPI specification generated successfully (version: ${metadata?.version || '1.0.0'})`);
 

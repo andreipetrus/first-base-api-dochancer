@@ -37,12 +37,12 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   extractedParameters,
 }) => {
   // Initialize with extracted parameters or existing config
-  const [apiParams, setApiParams] = useState<APIParameter[]>(
-    config.apiParameters || extractedParameters || []
-  );
+  const [apiParams, setApiParams] = useState<APIParameter[]>([]);
+  const [parametersInitialized, setParametersInitialized] = useState(false);
+  
   // Update parameters when extracted parameters are provided
   useEffect(() => {
-    if (extractedParameters && extractedParameters.length > 0 && apiParams.length === 0) {
+    if (extractedParameters && extractedParameters.length > 0 && !parametersInitialized) {
       // Auto-generate values for extracted parameters
       const paramsWithValues = extractedParameters.map(param => ({
         ...param,
@@ -50,12 +50,16 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
         generated: !param.value,
       }));
       setApiParams(paramsWithValues);
+      setParametersInitialized(true);
       onConfigChange({
         ...config,
         apiParameters: paramsWithValues,
       });
+    } else if (config.apiParameters && config.apiParameters.length > 0 && !parametersInitialized) {
+      setApiParams(config.apiParameters);
+      setParametersInitialized(true);
     }
-  }, [extractedParameters]);
+  }, [extractedParameters, config.apiParameters, parametersInitialized]);
 
   // Prefill test values in development mode
   useEffect(() => {

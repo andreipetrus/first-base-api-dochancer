@@ -147,4 +147,106 @@ export class ClaudeService {
       return '';
     }
   }
+
+  async generateProductIntro(productUrl?: string, documentationUrl?: string, existingDescription?: string): Promise<string> {
+    if (!this.client) {
+      throw new Error('Claude service not initialized');
+    }
+
+    const context = [];
+    if (productUrl) context.push(`Product URL: ${productUrl}`);
+    if (documentationUrl) context.push(`Documentation URL: ${documentationUrl}`);
+    if (existingDescription) context.push(`Existing description: ${existingDescription}`);
+
+    const prompt = `Generate a technical product introduction for API documentation based on the following information:
+
+${context.join('\n')}
+
+Requirements:
+- Use technical language appropriate for developers
+- Focus on the API's capabilities and use cases
+- Keep it concise (2-3 paragraphs, max 200 words)
+- Include what the API enables developers to do
+- Maintain a professional, technical tone
+
+Return only the introduction text, no additional formatting or headers.`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: prompt,
+        }],
+      });
+
+      return response.content[0].type === 'text' ? response.content[0].text : '';
+    } catch (error) {
+      logger.error('Error generating product intro:', error);
+      return existingDescription || 'API documentation';
+    }
+  }
+
+  async enhanceEndpointDocumentation(endpoint: APIEndpoint): Promise<APIEndpoint> {
+    if (!this.client) {
+      throw new Error('Claude service not initialized');
+    }
+
+    const originalDocs = endpoint.originalDocumentation || endpoint.description || '';
+    if (!originalDocs) {
+      return endpoint;
+    }
+
+    const prompt = `Review and enhance this API endpoint documentation:
+
+Original Documentation:
+${originalDocs}
+
+Current Endpoint Structure:
+Method: ${endpoint.method}
+Path: ${endpoint.path}
+Summary: ${endpoint.summary || 'Not provided'}
+Description: ${endpoint.description || 'Not provided'}
+
+Tasks:
+1. Transfer the verbatim original documentation content in a way that's compatible with OpenAPI spec
+2. Review grammar and spelling
+3. Improve clarity and readability for developers
+4. Maintain 100% technical accuracy - do not change technical details
+5. Keep all original examples, code snippets, and technical specifications
+
+Return a JSON object with:
+{
+  "summary": "brief one-line summary",
+  "description": "enhanced description incorporating original docs",
+  "technicalNotes": "any important technical details from original docs"
+}`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: prompt,
+        }],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const enhanced = JSON.parse(jsonMatch[0]);
+        return {
+          ...endpoint,
+          summary: enhanced.summary || endpoint.summary,
+          description: enhanced.description || endpoint.description,
+        };
+      }
+      return endpoint;
+    } catch (error) {
+      logger.error('Error enhancing endpoint documentation:', error);
+      return endpoint;
+    }
+  }
 }

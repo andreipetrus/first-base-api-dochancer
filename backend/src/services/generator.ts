@@ -13,13 +13,17 @@ export class OpenAPIGenerator {
       description?: string;
       version?: string;
       baseUrl?: string;
+      productIntro?: string;
     }
   ): any {
+    // Use product intro if available, fallback to description
+    const description = metadata.productIntro || metadata.description || 'Auto-generated API documentation';
+    
     const openApiSpec = {
       openapi: '3.0.3',
       info: {
         title: metadata.title || 'API Documentation',
-        description: metadata.description || 'Auto-generated API documentation',
+        description: description,
         version: metadata.version || '1.0.0',  // Will use inferred version if available
       },
       servers: metadata.baseUrl ? [{ url: metadata.baseUrl }] : [],

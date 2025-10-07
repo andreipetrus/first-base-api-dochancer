@@ -20,6 +20,7 @@ interface GenerateStepProps {
   onSpecGenerated: (spec: any) => void;
   onChatOpen: () => void;
   onStartOver?: () => void;
+  documentationUrl?: string;
 }
 
 const GenerateStep: React.FC<GenerateStepProps> = ({
@@ -29,6 +30,7 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
   onSpecGenerated,
   onChatOpen,
   onStartOver,
+  documentationUrl,
 }) => {
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
@@ -55,6 +57,9 @@ const GenerateStep: React.FC<GenerateStepProps> = ({
           version: metadata?.version || '1.0.0',
           baseUrl: config.baseUrl,
         },
+        productUrl: config.productUrl,
+        documentationUrl: documentationUrl, // Original documentation URL
+        claudeApiKey: config.claudeApiKey, // Pass Claude API key for enhancement
       });
 
       const spec = specResponse.data.spec;
