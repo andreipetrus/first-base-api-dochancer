@@ -4,6 +4,8 @@ build/
 *.log
 .env
 .env.local
+.env.test
+.env.test.local
 .DS_Store
 coverage/
 .vscode/
@@ -16,3 +18,6 @@ temp/
 uploads/
 generated/
 TEST_MODE.md
+test-results/
+playwright-report/
+playwright/.cache/

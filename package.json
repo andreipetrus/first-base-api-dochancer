@@ -18,10 +18,19 @@
     "build:frontend": "npm run build --workspace=frontend",
     "start": "npm run start --workspace=backend",
     "test": "npm run test --workspaces",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:upload": "playwright test upload.spec.ts",
+    "test:workflow": "playwright test full-workflow.spec.ts",
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@playwright/test": "^1.56.0",
+    "concurrently": "^8.2.2",
+    "playwright": "^1.56.0"
   },
   "engines": {
     "node": ">=18.0.0",
