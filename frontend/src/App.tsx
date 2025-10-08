@@ -7,6 +7,8 @@ import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
 import StepLabel from '@mui/material/StepLabel';
 import Typography from '@mui/material/Typography';
+import Link from '@mui/material/Link';
+import Chip from '@mui/material/Chip';
 import { APIEndpoint, ProcessingStatus, ProjectConfig } from '@api-dochancer/shared';
 import UploadStep from './components/UploadStep';
 import ConfigurationStep from './components/ConfigurationStep';
@@ -45,6 +47,7 @@ function App() {
   const [showChat, setShowChat] = useState(false);
   const [extractedBaseUrl, setExtractedBaseUrl] = useState<string | undefined>();
   const [extractedMetadata, setExtractedMetadata] = useState<any>({});
+  const [extractedParameters, setExtractedParameters] = useState<any[]>([]);
 
   const handleStartOver = () => {
     // Reset all state to initial values
@@ -57,6 +60,7 @@ function App() {
     setShowChat(false);
     setExtractedBaseUrl(undefined);
     setExtractedMetadata({});
+    setExtractedParameters([]);
   };
 
   const handleNext = () => {
@@ -101,6 +105,9 @@ function App() {
             onProcessComplete={(extractedEndpoints, metadata) => {
               setEndpoints(extractedEndpoints);
               setExtractedMetadata(metadata || {});
+              if (metadata?.commonParameters) {
+                setExtractedParameters(metadata.commonParameters);
+              }
               handleNext();
             }}
             onStatusChange={setProcessingStatus}
@@ -114,6 +121,7 @@ function App() {
             onEndpointsChange={setEndpoints}
             onNext={handleNext}
             onBack={handleBack}
+            extractedParameters={extractedParameters}
           />
         );
       case 4:
@@ -138,9 +146,12 @@ function App() {
       <CssBaseline />
       <Container maxWidth="lg">
         <Box sx={{ my: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom align="center">
-            API DocHancer
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h3" component="h1" gutterBottom sx={{ mb: 0, flex: 1 }}>
+              API DocHancer
+            </Typography>
+            <Chip label="v1.0" color="primary" variant="outlined" size="small" />
+          </Box>
           <Typography variant="subtitle1" align="center" color="text.secondary" paragraph>
             Transform your API documentation into OpenAPI-compliant specifications with AI enhancement
           </Typography>
@@ -167,6 +178,20 @@ function App() {
             onSpecUpdate={setOpenApiSpec}
           />
         )}
+
+        <Box sx={{ mt: 8, mb: 4, pt: 4, borderTop: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Created by{' '}
+            <Link href="https://github.com/andreipetrus" target="_blank" rel="noopener">
+              Andrei Petrus
+            </Link>
+            {' '}• {' '}
+            <Link href="https://github.com/andreipetrus/first-base-api-dochancer" target="_blank" rel="noopener">
+              GitHub
+            </Link>
+            {' '}• © 2025
+          </Typography>
+        </Box>
       </Container>
     </ThemeProvider>
   );

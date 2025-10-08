@@ -1,6 +1,6 @@
 {
   "name": "api-dochancer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "OpenAPI Documentation Generator with AI Enhancement",
   "private": true,
   "workspaces": [
@@ -31,6 +31,8 @@
   "devDependencies": {
     "@playwright/test": "^1.56.0",
     "concurrently": "^8.2.2",
+    "csv-parse": "^6.1.0",
+    "csv-writer": "^1.6.0",
     "playwright": "^1.56.0"
   },
   "engines": {

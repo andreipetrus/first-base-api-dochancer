@@ -1,10 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Alert from '@mui/material/Alert';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { ProjectConfig } from '@api-dochancer/shared';
 
 interface ConfigurationStepProps {
@@ -22,6 +26,8 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
   onBack,
   extractedBaseUrl,
 }) => {
+  const [showClaudeKey, setShowClaudeKey] = useState(false);
+  const [showTestKey, setShowTestKey] = useState(false);
 
   // Prefill test values in development mode
   useEffect(() => {
@@ -96,12 +102,24 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
         <TextField
           fullWidth
           label="Claude API Key"
-          type="password"
+          type={showClaudeKey ? 'text' : 'password'}
           value={config.claudeApiKey || ''}
           onChange={handleChange('claudeApiKey')}
           margin="normal"
           required
           helperText="Required for AI-powered documentation enhancement"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowClaudeKey(!showClaudeKey)}
+                  edge="end"
+                >
+                  {showClaudeKey ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
       </Paper>
 
@@ -113,11 +131,23 @@ const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
         <TextField
           fullWidth
           label="Test API Key"
-          type="password"
+          type={showTestKey ? 'text' : 'password'}
           value={config.testApiKey || ''}
           onChange={handleChange('testApiKey')}
           margin="normal"
           helperText="API key for testing endpoints (if authentication is required)"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowTestKey(!showTestKey)}
+                  edge="end"
+                >
+                  {showTestKey ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
 
         <TextField

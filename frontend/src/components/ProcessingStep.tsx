@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
@@ -34,6 +35,8 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
     validations: [],
   });
   const [error, setError] = useState<string | null>(null);
+  const [processedEndpoints, setProcessedEndpoints] = useState<APIEndpoint[] | null>(null);
+  const [processedMetadata, setProcessedMetadata] = useState<any>(null);
 
   useEffect(() => {
     processDocument();
@@ -180,6 +183,7 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
         version: extractResponse.data.result.version,
         title: extractResponse.data.result.title,
         description: extractResponse.data.result.description,
+        commonParameters: extractResponse.data.result.commonParameters,
       };
 
       setStatus({
@@ -215,7 +219,8 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
           validations,
         });
 
-        onProcessComplete(testedEndpoints, extractedMetadata);
+        setProcessedEndpoints(testedEndpoints);
+        setProcessedMetadata(extractedMetadata);
       } else {
         setStatus({
           step: 'complete',
@@ -224,7 +229,8 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
           validations,
         });
 
-        onProcessComplete(endpoints, extractedMetadata);
+        setProcessedEndpoints(endpoints);
+        setProcessedMetadata(extractedMetadata);
       }
 
       onStatusChange(status);
@@ -354,9 +360,23 @@ const ProcessingStep: React.FC<ProcessingStepProps> = ({
         )}
       </Paper>
 
-      <Typography variant="body2" color="text.secondary">
-        This process may take a few moments depending on the size of your documentation...
-      </Typography>
+      {status.step !== 'complete' && (
+        <Typography variant="body2" color="text.secondary">
+          This process may take a few moments depending on the size of your documentation...
+        </Typography>
+      )}
+
+      {status.step === 'complete' && processedEndpoints && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => onProcessComplete(processedEndpoints, processedMetadata)}
+          >
+            Continue to Review & Test
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 };

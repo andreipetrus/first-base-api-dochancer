@@ -110,11 +110,37 @@ export class DocumentParser {
       const $ = cheerio.load(response.data);
       $('script, style, nav, header, footer').remove();
       
-      // Extract main content
+      const parts: string[] = [];
       const mainContent = $('main, article, .content, .documentation, body').first();
-      const text = mainContent.length > 0 ? mainContent.text() : $('body').text();
+      const container = mainContent.length > 0 ? mainContent : $('body');
       
-      return text.trim();
+      container.find('*').each((i, elem) => {
+        const $elem = $(elem);
+        const tagName = elem.tagName?.toLowerCase();
+        
+        if (tagName === 'code' || tagName === 'pre') {
+          const codeText = $elem.text().trim();
+          if (codeText) {
+            parts.push(`\n[CODE]\n${codeText}\n[/CODE]\n`);
+          }
+        } else if (tagName === 'p' || tagName === 'div' || tagName === 'li') {
+          const text = $elem.clone().children('code, pre').remove().end().text().trim();
+          if (text && !parts.includes(text)) {
+            parts.push(text);
+          }
+        } else if (tagName && tagName.match(/^h[1-6]$/)) {
+          const heading = $elem.text().trim();
+          if (heading) {
+            parts.push(`\n## ${heading}\n`);
+          }
+        }
+      });
+      
+      if (parts.length === 0) {
+        return container.text().trim();
+      }
+      
+      return parts.join('\n').trim();
     } catch (error) {
       logger.error(`Error fetching linked documentation from ${url}:`, error);
       return null;

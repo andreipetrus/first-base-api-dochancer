@@ -173,7 +173,7 @@ Return only the introduction text, no additional formatting or headers.`;
 
     try {
       const response = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 800,
         messages: [{
           role: 'user',
@@ -225,7 +225,7 @@ Return a JSON object with:
 
     try {
       const response = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -277,7 +277,8 @@ Extract and return a JSON object with:
       "in": "query|header|path|cookie",
       "description": "parameter description",
       "required": true|false,
-      "schema": { "type": "string|integer|boolean|array|object" }
+      "schema": { "type": "string|integer|boolean|array|object" },
+      "example": "example value if provided"
     }
   ],
   "requestBody": {
@@ -302,26 +303,40 @@ Extract and return a JSON object with:
   ]
 }
 
-Guidelines for parameter location detection:
-- **Query parameters**: Look for patterns like "?key=value", "URL parameters", "query string", "in the URL"
-- **Headers**: Look for "header:", "HTTP header", "Authorization:", "X-API-Key:", or similar header notation
-- **Path parameters**: Look for ":id", "{id}", or "in the path" notation
-- **Body parameters**: Look for "request body", "POST data", "JSON payload"
+CRITICAL INSTRUCTIONS - READ CAREFULLY:
 
-Special cases:
-- If documentation shows example URL like "/api/v2/endpoint?key=xxx" → "key" is a QUERY parameter
-- If documentation shows "key: xxx" in a code block → likely a HEADER
-- Generic parameter names like "key", "api_key", "token" without prefix → check context for location
-- Authentication parameters: determine from examples (query string vs header)
+1. **Extract ALL parameters mentioned in the documentation**, including:
+   - Parameters shown in URL examples (e.g., ?key=xxx, ?fields=abc)
+   - Parameters mentioned in curl commands
+   - Parameters in JSON request/response examples
+   - Path parameters (like :id, :account_key)
+   - API keys and authentication parameters
 
-Extract ALL parameters mentioned and determine their correct location based on context clues in the documentation.
+2. **Parameter location detection rules**:
+   - **Query parameters**: Appear after "?" in URLs (e.g., "?key=value&mode=test")
+   - **Path parameters**: Appear in the path with ":" or "{}" (e.g., /:id/, /{id}/)
+   - **Body parameters**: Appear in JSON objects in request examples or described as "request body"
+   - **Headers**: Explicitly mentioned as "header" or "HTTP header"
+
+3. **Common patterns in Fingerbank API**:
+   - "key" parameter is ALWAYS a query parameter when shown as "?key=xxx"
+   - JSON properties in response examples may also be valid body/query parameters
+   - Look for curl command examples showing parameters
+
+4. **Be thorough**: Search the entire documentation text for:
+   - curl examples
+   - URL patterns
+   - JSON request/response examples
+   - Parameter descriptions in plain text
+
+Extract ALL parameters you find. Don't skip any.
 
 Return ONLY the JSON object, no other text.`;
 
     try {
       const response = await this.client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 3000,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
         messages: [{
           role: 'user',
           content: prompt,

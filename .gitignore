@@ -21,3 +21,26 @@ TEST_MODE.md
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Testing artifacts - Fingerbank
+fingerbank_*.csv
+fingerbank_*.json
+app_extraction_*.csv
+comparison_*.csv
+comparison_*.json
+debug_*.json
+debug_*.js
+test-extraction.js
+debug-test-failures.js
+scripts/extract-fingerbank-ground-truth.js
+scripts/extract-app-results.js
+scripts/compare-results.js
+scripts/debug-extraction.js
+debug-*.png
+
+# API Keys and Secrets
+*.key
+*_KEY=*
+CLAUDE_API_KEY
+TEST_CLAUDE_KEY
+TEST_FINGERBANK_KEY
