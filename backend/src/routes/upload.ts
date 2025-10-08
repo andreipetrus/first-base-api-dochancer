@@ -6,12 +6,14 @@ import { getServices } from '../services';
 import { AppError } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
 import { APIEndpoint, APIParameter } from '@api-dochancer/shared';
+import { extractCommonParameters } from '../utils/parameterExtractor';
 
 const logger = createLogger();
 const router = Router();
 
-// Extract common parameters from parsed endpoints
-function extractCommonParameters(endpoints: APIEndpoint[]): APIParameter[] {
+// Legacy function - now moved to utils/parameterExtractor.ts
+// Keeping this comment for reference
+function extractCommonParametersLegacy(endpoints: APIEndpoint[]): APIParameter[] {
   const paramMap = new Map<string, APIParameter>();
   const paramFrequency = new Map<string, number>();
   
@@ -40,9 +42,11 @@ function extractCommonParameters(endpoints: APIEndpoint[]): APIParameter[] {
   }
   
   // Extract headers from endpoint paths (common auth headers)
+  // Note: Generic parameter names like 'key', 'token', 'apikey' are NOT included here
+  // because they could be query parameters. Let AI detection handle those.
   const commonHeaders = [
     'Authorization', 'X-API-Key', 'API-Key', 'X-Auth-Token', 
-    'X-Access-Token', 'X-Request-ID', 'X-Session-ID', 'key'
+    'X-Access-Token', 'X-Request-ID', 'X-Session-ID'
   ];
   
   for (const headerName of commonHeaders) {

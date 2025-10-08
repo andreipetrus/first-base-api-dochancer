@@ -249,4 +249,109 @@ Return a JSON object with:
       return endpoint;
     }
   }
+
+  async extractEndpointDetails(endpoint: APIEndpoint): Promise<APIEndpoint> {
+    if (!this.client) {
+      throw new Error('Claude service not initialized');
+    }
+
+    const documentation = endpoint.originalDocumentation || endpoint.description || '';
+    if (!documentation || documentation.length < 50) {
+      return endpoint;
+    }
+
+    const prompt = `Extract detailed API endpoint information from this documentation:
+
+Endpoint: ${endpoint.method} ${endpoint.path}
+
+Documentation:
+${documentation}
+
+Extract and return a JSON object with:
+{
+  "summary": "brief one-line summary",
+  "description": "detailed description of what this endpoint does",
+  "parameters": [
+    {
+      "name": "parameter_name",
+      "in": "query|header|path|cookie",
+      "description": "parameter description",
+      "required": true|false,
+      "schema": { "type": "string|integer|boolean|array|object" }
+    }
+  ],
+  "requestBody": {
+    "description": "request body description",
+    "required": true|false,
+    "content": {
+      "application/json": {
+        "schema": { "type": "object", "properties": {} }
+      }
+    }
+  },
+  "responses": [
+    {
+      "statusCode": "200",
+      "description": "response description",
+      "content": {
+        "application/json": {
+          "schema": { "type": "object" }
+        }
+      }
+    }
+  ]
+}
+
+Guidelines for parameter location detection:
+- **Query parameters**: Look for patterns like "?key=value", "URL parameters", "query string", "in the URL"
+- **Headers**: Look for "header:", "HTTP header", "Authorization:", "X-API-Key:", or similar header notation
+- **Path parameters**: Look for ":id", "{id}", or "in the path" notation
+- **Body parameters**: Look for "request body", "POST data", "JSON payload"
+
+Special cases:
+- If documentation shows example URL like "/api/v2/endpoint?key=xxx" → "key" is a QUERY parameter
+- If documentation shows "key: xxx" in a code block → likely a HEADER
+- Generic parameter names like "key", "api_key", "token" without prefix → check context for location
+- Authentication parameters: determine from examples (query string vs header)
+
+Extract ALL parameters mentioned and determine their correct location based on context clues in the documentation.
+
+Return ONLY the JSON object, no other text.`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 3000,
+        messages: [{
+          role: 'user',
+          content: prompt,
+        }],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        
+        return {
+          ...endpoint,
+          summary: extracted.summary || endpoint.summary,
+          description: extracted.description || endpoint.description,
+          parameters: extracted.parameters && extracted.parameters.length > 0 
+            ? extracted.parameters 
+            : endpoint.parameters,
+          requestBody: extracted.requestBody || endpoint.requestBody,
+          responses: extracted.responses && extracted.responses.length > 0
+            ? extracted.responses
+            : endpoint.responses,
+        };
+      }
+      
+      return endpoint;
+    } catch (error) {
+      logger.error('Error extracting endpoint details:', error);
+      return endpoint;
+    }
+  }
 }

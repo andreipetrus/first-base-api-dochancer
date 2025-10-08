@@ -45,7 +45,6 @@ function App() {
   const [showChat, setShowChat] = useState(false);
   const [extractedBaseUrl, setExtractedBaseUrl] = useState<string | undefined>();
   const [extractedMetadata, setExtractedMetadata] = useState<any>({});
-  const [extractedParameters, setExtractedParameters] = useState<any[]>([]);
 
   const handleStartOver = () => {
     // Reset all state to initial values
@@ -58,7 +57,6 @@ function App() {
     setShowChat(false);
     setExtractedBaseUrl(undefined);
     setExtractedMetadata({});
-    setExtractedParameters([]);
   };
 
   const handleNext = () => {
@@ -81,11 +79,6 @@ function App() {
                 setExtractedBaseUrl(file.parsed.baseUrl);
                 setConfig(prev => ({ ...prev, baseUrl: file.parsed.baseUrl }));
               }
-              // Store extracted common parameters
-              if (file.parsed?.commonParameters) {
-                setExtractedParameters(file.parsed.commonParameters);
-                setConfig(prev => ({ ...prev, apiParameters: file.parsed.commonParameters }));
-              }
               handleNext();
             }}
           />
@@ -98,7 +91,6 @@ function App() {
             onNext={handleNext}
             onBack={handleBack}
             extractedBaseUrl={extractedBaseUrl}
-            extractedParameters={extractedParameters}
           />
         );
       case 2:

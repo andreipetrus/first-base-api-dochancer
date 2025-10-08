@@ -3,6 +3,7 @@ import { getServices } from '../services';
 import { AppError } from '../middleware/errorHandler';
 import { ProcessingStatus } from '@api-dochancer/shared';
 import { createLogger } from '../utils/logger';
+import { extractCommonParameters } from '../utils/parameterExtractor';
 
 const logger = createLogger();
 const router = Router();
@@ -35,7 +36,31 @@ router.post('/extract', async (req, res, next) => {
     status.progress = 40;
     status.message = 'Extracting API endpoints...';
 
-    const endpoints = await apiExtractor.extractAndEnhance(parsedDoc, productUrl);
+    let endpoints = await apiExtractor.extractAndEnhance(parsedDoc, productUrl);
+
+    // If Claude API key is provided, extract detailed information from documentation
+    if (claudeApiKey && claudeService.isInitialized()) {
+      status.step = 'analyzing';
+      status.progress = 60;
+      status.message = 'Analyzing endpoint documentation...';
+      
+      logger.info(`Extracting detailed information for ${endpoints.length} endpoints...`);
+      
+      const detailExtractionPromises = endpoints.map(endpoint => 
+        claudeService.extractEndpointDetails(endpoint)
+      );
+      endpoints = await Promise.all(detailExtractionPromises);
+      
+      logger.info('Endpoint detail extraction complete');
+    }
+
+    // Extract common parameters AFTER documentation has been fetched and processed
+    status.step = 'extracting-params';
+    status.progress = 90;
+    status.message = 'Extracting API parameters...';
+    
+    const extractedParameters = extractCommonParameters(endpoints);
+    logger.info(`Extracted ${extractedParameters.length} common parameters`);
 
     status.step = 'complete';
     status.progress = 100;
@@ -52,6 +77,7 @@ router.post('/extract', async (req, res, next) => {
         version: parsedDoc.version,  // This now includes the inferred version
         baseUrl: parsedDoc.baseUrl,
         endpoints,
+        commonParameters: extractedParameters,  // Include extracted parameters
       },
     });
   } catch (error) {

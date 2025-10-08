@@ -57,10 +57,67 @@ export class DocumentParser {
         }
       }
       
+      // If endpoints have documentation links, fetch them
+      if (doc.endpoints && doc.endpoints.length > 0) {
+        const baseUrl = new URL(url);
+        const endpointsWithLinks = doc.endpoints.filter((ep: any) => ep.documentationLink);
+        
+        if (endpointsWithLinks.length > 0) {
+          logger.info(`Found ${endpointsWithLinks.length} endpoints with documentation links, fetching details...`);
+          
+          // Fetch documentation for each endpoint (limit concurrency to avoid overwhelming server)
+          const fetchPromises = endpointsWithLinks.map(async (ep: any) => {
+            try {
+              const docUrl = new URL(ep.documentationLink, baseUrl).href;
+              const docContent = await this.fetchLinkedDocumentation(docUrl);
+              if (docContent) {
+                ep.originalDocumentation = docContent;
+                logger.info(`Fetched documentation for ${ep.method} ${ep.path}`);
+              } else {
+                // If fetching failed, use main page documentation as fallback
+                ep.originalDocumentation = doc.rawContent;
+              }
+            } catch (error) {
+              logger.error(`Failed to fetch documentation for ${ep.method} ${ep.path}:`, error);
+              // Use main page documentation as fallback
+              (ep as any).originalDocumentation = doc.rawContent;
+            }
+          });
+          
+          await Promise.all(fetchPromises);
+        } else if (doc.rawContent) {
+          // No links found, use main page documentation for all endpoints
+          for (const ep of doc.endpoints) {
+            (ep as any).originalDocumentation = doc.rawContent;
+          }
+        }
+      }
+      
       return doc;
     } catch (error) {
       logger.error('Error fetching URL:', error);
       throw new Error('Failed to fetch documentation from URL');
+    }
+  }
+
+  private async fetchLinkedDocumentation(url: string): Promise<string | null> {
+    try {
+      const response = await axios.get(url, {
+        headers: { 'User-Agent': 'API-Dochancer/1.0' },
+        timeout: 15000,
+      });
+      
+      const $ = cheerio.load(response.data);
+      $('script, style, nav, header, footer').remove();
+      
+      // Extract main content
+      const mainContent = $('main, article, .content, .documentation, body').first();
+      const text = mainContent.length > 0 ? mainContent.text() : $('body').text();
+      
+      return text.trim();
+    } catch (error) {
+      logger.error(`Error fetching linked documentation from ${url}:`, error);
+      return null;
     }
   }
 
@@ -110,7 +167,161 @@ export class DocumentParser {
       }
     }
     
+    // Extract full documentation for each endpoint
+    doc.endpoints = this.extractEndpointsFromHTML($, html, doc.endpoints || []);
+    
     return doc;
+  }
+
+  private extractEndpointsFromHTML($: cheerio.CheerioAPI, html: string, basicEndpoints: APIEndpoint[]): APIEndpoint[] {
+    const endpointsMap = new Map<string, APIEndpoint>();
+    
+    // First, add basic endpoints to map
+    for (const ep of basicEndpoints) {
+      const key = `${ep.method}_${ep.path}`;
+      endpointsMap.set(key, ep);
+    }
+    
+    // Look for endpoint documentation sections
+    // Pattern 1: Headings with HTTP method and path
+    $('h1, h2, h3, h4, h5, h6').each((i, heading) => {
+      const headingText = $(heading).text().trim();
+      
+      // Match patterns like "GET /api/v2/path" or just "/api/v2/path"
+      const endpointMatch = headingText.match(/(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)?\s*(\/\S+)/i);
+      
+      if (endpointMatch) {
+        const method = (endpointMatch[1] || 'GET').toUpperCase() as any;
+        const path = endpointMatch[2];
+        const key = `${method}_${path}`;
+        
+        // Extract all content after this heading until next heading
+        const documentation = this.extractSectionContent($, heading);
+        
+        // Get or create endpoint
+        let endpoint = endpointsMap.get(key);
+        if (!endpoint) {
+          endpoint = {
+            id: key.replace(/[^a-zA-Z0-9]/g, '_'),
+            method,
+            path,
+            summary: headingText,
+          };
+          endpointsMap.set(key, endpoint);
+        }
+        
+        // Add the full documentation
+        endpoint.originalDocumentation = documentation;
+        
+        // Try to extract description from the documentation
+        if (!endpoint.description && documentation) {
+          const firstPara = documentation.split('\n\n')[0];
+          if (firstPara && firstPara.length < 500) {
+            endpoint.description = firstPara.trim();
+          }
+        }
+      }
+    });
+    
+    // Pattern 2: Look for code blocks or pre tags with endpoint patterns
+    $('code, pre, .endpoint, .api-endpoint').each((i, elem) => {
+      const elemText = $(elem).text().trim();
+      const endpointMatch = elemText.match(/^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+(\/\S+)/i);
+      
+      if (endpointMatch) {
+        const method = endpointMatch[1].toUpperCase() as any;
+        const path = endpointMatch[2];
+        const key = `${method}_${path}`;
+        
+        if (!endpointsMap.has(key)) {
+          // Extract documentation from surrounding content
+          const parent = $(elem).parent();
+          const documentation = parent.text().trim();
+          
+          endpointsMap.set(key, {
+            id: key.replace(/[^a-zA-Z0-9]/g, '_'),
+            method,
+            path,
+            summary: `${method} ${path}`,
+            originalDocumentation: documentation.length > 100 ? documentation : undefined,
+          });
+        }
+      }
+    });
+    
+    // Pattern 3: Look for table rows or links with endpoint paths (for index pages)
+    $('a').each((i, link) => {
+      const linkText = $(link).text().trim();
+      const href = $(link).attr('href');
+      
+      // Match endpoint patterns in link text like "GET /api/v2/path"
+      const endpointMatch = linkText.match(/(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+(\/\S+)/i);
+      
+      if (endpointMatch && href) {
+        const method = endpointMatch[1].toUpperCase() as any;
+        const path = endpointMatch[2];
+        const key = `${method}_${path}`;
+        
+        let endpoint = endpointsMap.get(key);
+        if (!endpoint) {
+          endpoint = {
+            id: key.replace(/[^a-zA-Z0-9]/g, '_'),
+            method,
+            path,
+            summary: linkText,
+          };
+          endpointsMap.set(key, endpoint);
+        }
+        
+        // Store the documentation link for later fetching
+        (endpoint as any).documentationLink = href;
+      }
+    });
+    
+    return Array.from(endpointsMap.values());
+  }
+
+  private extractSectionContent($: cheerio.CheerioAPI, heading: cheerio.Element): string {
+    const parts: string[] = [];
+    let current = $(heading).next();
+    const headingLevel = parseInt(heading.tagName.substring(1));
+    
+    while (current.length > 0) {
+      const tagName = current.prop('tagName')?.toLowerCase();
+      
+      // Stop at next heading of same or higher level
+      if (tagName && tagName.match(/^h[1-6]$/)) {
+        const currentLevel = parseInt(tagName.substring(1));
+        if (currentLevel <= headingLevel) {
+          break;
+        }
+      }
+      
+      // Extract text content while preserving structure
+      const text = current.text().trim();
+      if (text) {
+        // Preserve lists, paragraphs, code blocks
+        if (tagName === 'ul' || tagName === 'ol') {
+          const items: string[] = [];
+          current.find('li').each((i, li) => {
+            items.push(`- ${$(li).text().trim()}`);
+          });
+          parts.push(items.join('\n'));
+        } else if (tagName === 'pre' || tagName === 'code') {
+          parts.push(`\`\`\`\n${text}\n\`\`\``);
+        } else if (tagName === 'p' || tagName === 'div') {
+          parts.push(text);
+        } else if (tagName && tagName.match(/^h[1-6]$/)) {
+          parts.push(`\n### ${text}\n`);
+        } else {
+          parts.push(text);
+        }
+      }
+      
+      current = current.next();
+    }
+    
+    return parts.join('\n\n').trim();
   }
 
   private parseJSON(jsonStr: string): ParsedDocument {

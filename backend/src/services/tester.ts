@@ -125,15 +125,25 @@ export class APITester {
       'Accept': 'application/json',
     };
 
-    if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    // Add custom header parameters from configuration first
+    const headerParams = this.apiParameters.filter(p => p.type === 'header');
+    const hasCustomAuth = headerParams.some(p => 
+      p.name && (
+        p.name.toLowerCase().includes('auth') || 
+        p.name.toLowerCase().includes('key') ||
+        p.name.toLowerCase().includes('token')
+      )
+    );
+
+    // Only add default auth headers if no custom auth headers are configured
+    if (this.apiKey && !hasCustomAuth) {
+      // Try X-API-Key first (more common for API key authentication)
       headers['X-API-Key'] = this.apiKey;
     }
 
-    // Add custom header parameters from configuration
-    for (const param of this.apiParameters.filter(p => p.type === 'header')) {
+    // Add all custom header parameters (these will override defaults if there's conflict)
+    for (const param of headerParams) {
       if (param.name && param.value) {
-        // Override default headers if custom ones are provided
         headers[param.name] = param.value;
       }
     }
