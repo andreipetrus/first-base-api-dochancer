@@ -1,4 +1,4 @@
-# API DocHancer
+# API DocHancer v1.1
 
 An open-source application that transforms existing API documentation into OpenAPI-compliant specifications with AI-powered enhancements. No backend modifications required - simply reorganize, enhance, and provide a Swagger interface for real-time API testing.
 
